@@ -14,86 +14,140 @@ class Parser:
         self.lemmatized_word=None
 
     def tokenize_sentence(self):
-        tokenized_sentence=nltk.tokenize.sent_tokenize(self.document)
+        """
+        Used to tokenize the paragraphs into sentences.
+        This method will return the sentences after removing all the punctuators
+        """
+        try:
+            tokenized_sentence=nltk.tokenize.sent_tokenize(self.document)
+        except Exception as e:
+            print(e.__class__, "occurred.")
+            print("punkt was not downloaded!")
+            print("type nltk.download('punkt') in python shell")
         sentences=[]
         for sentence in tokenized_sentence:
-            punctuation = re.compile(r'[-.?!,:;()|0-9]')
-            s = punctuation.sub(' ',sentence)
-            #any further punctuators or separators do it in words
+            punctuation = re.compile(r'[-.?!,:;()\"|0-9]')
+            s = punctuation.sub(' ',sentence)    #any further punctuators or separators do it in tokenize_word()
             sentences.append(s)
         self.sentences = sentences
         #print(sentences,end="\n")
 
     def tokenize_word(self):
-        '''
-        sentences = self.sentences
-        words=[]
-        for sentence in sentences:
-            #tokenized_word=nltk.tokenize.word_tokenize(sentence)
-            tokenized_word = sentence.split()
-            words.extend(tokenized_word)
-        '''
-        #any further punctuators or separators do it in here
-        words = []
+        """
+        This method tokenizes the sentences into words.
+        The original words can be used for locating in document
+        """
+        words = []                     
         for sentence in self.sentences:
-            words.extend(sentence.split())
-        # The original words can be used for locating in document
-        #print(words,end="\n")
+            words.extend(sentence.split())      #any further removal of punctuators or separators do it in here
         self.words = words 
+        #print(words,end="\n")
 
     def get_senna_tags_sentences(self):
-        home = os.path.expanduser('~')
-        # download SennaTagger and unzip it and provide the location to the senna-v3.0.exe
-        st = SennaTagger(home+"\Downloads\senna-v3.0\senna")
-        tag_dict =[] 
-        for sentence in self.sentences:
-            tag_dict.extend((st.tag(sentence.split())))
-        self.tag_dict=tag_dict
+        """
+        Assigns the part of speech to word of a sentence using SennaTagger.
+        To use the SennaTagger, you need to download the zip file.
+        Here, "\Downloads\senna-v3.0\senna" is the default location of senna.exe
+        after unzipping the file in Downloads folder.
+        """
+        try:
+            home = os.path.expanduser('~')
+            st = SennaTagger(home+"\Downloads\senna-v3.0\senna")
+            tag_dict =[] 
+            for sentence in self.sentences:
+                try:
+                    tag_dict.extend((st.tag(sentence.split())))
+                except Exception as e:
+                    print(e.__class__, "occurred.")
+                    print("type nltk.download('tagsets') in python shell")
+
+            self.tag_dict=tag_dict
+
+        except Exception as e:
+            print(e.__class__, "occurred.")
+            print("senna.exe was not found at that path!")
         #print(tag_dict,end="\n")
 
     def remove_common_words(self):
-        important_words=[]
-        common_words=set(nltk.corpus.stopwords.words("english"))
-        for word in self.tag_dict:
-            if word[0].lower() not in common_words:
-                important_words.append(word)           #word is a tuple
-        self.important_words = important_words
+        """
+        This method removes the common words like is,am,are,etc.
+        Attribute self.tag_dict is list of tuple(word,tag)
+        """
+        try:
+            important_words=[]
+            common_words=set(nltk.corpus.stopwords.words("english"))
+            for word in self.tag_dict:
+                if word[0].lower() not in common_words:
+                    important_words.append(word)          
+            self.important_words = important_words
+        except Exception as e:
+            print(e.__class__, "occurred.")
+            print("stopwords was not downloaded!")
+            print("type nltk.download('stopwords') in python shell")
+
         #print(important_words,end="\n")
                
     def get_wordnet_pos(self,word):
-        #Map POS tag to first character lemmatize() accepts, word is string
-        tag = nltk.pos_tag([word])[0][1][0].upper()
-        tag_dict = {"J": wordnet.ADJ,
-                    "N": wordnet.NOUN,
-                    "V": wordnet.VERB,
-                    "R": wordnet.ADV}
-        return tag_dict.get(tag, wordnet.NOUN)
-    
+        """
+        IF you don't want to download SennaTagger then you can use this method to
+        assign part of speech and maps the wordnet tag used by the lemmatizer function below.
+        Parameter word is a string
+        """
+        try:
+            tag = nltk.pos_tag([word])[0][1][0].upper()
+        except Exception as e:
+            print(e.__class__, "occurred.")
+            print("type nltk.download('tagsets') in python shell")
+        try:
+            tag_dict = {"J": wordnet.ADJ,
+                        "N": wordnet.NOUN,
+                        "V": wordnet.VERB,
+                        "R": wordnet.ADV}
+            return tag_dict.get(tag, wordnet.NOUN)
+        except Exception as e:
+            print(e.__class__, "occurred.")
+            print("type nltk.download('wordnet') in python shell")
+
     def get_senna_pos(self,word):
         '''
-        Applies the tag method over a list of sentences. This method will return for each sentence a list of tuples of (word, tag).
-        parameter word is a tuple(word,TAG)
+        This method will return for each word a wordnet tag used by the lemmatizer function below
+        Parameter word is a tuple(word,tag)
         '''
-        tag=word[1][0].upper()
-        t_dict = {"J": wordnet.ADJ,
-                    "N": wordnet.NOUN,
-                    "V": wordnet.VERB,
-                    "R": wordnet.ADV}
-        return t_dict.get(tag, wordnet.NOUN)
+        try:
+            tag=word[1][0].upper()
+            t_dict = {"J": wordnet.ADJ,
+                        "N": wordnet.NOUN,
+                        "V": wordnet.VERB,
+                        "R": wordnet.ADV}
+            return t_dict.get(tag, wordnet.NOUN)
+        except Exception as e:
+            print(e.__class__, "occurred.")
+            print("type nltk.download('wordnet') in python shell")            
 
 
     def lemmatization_with_pos_tags(self):
-        lem = nltk.stem.wordnet.WordNetLemmatizer()
-        lemmatized_words=[]
-        #self.important_words returns list of tuples
-        for word in self.important_words:
-            tag = self.get_senna_pos(word)
-            lemmatized_word = lem.lemmatize(word[0],tag)
-            lemmatized_words.append(lemmatized_word.lower())
-        self.lemmatized_word=lemmatized_words
+        """
+        This method is used to lemmatize words to their base words.
+        For example, loved -> love, raining -> rain
+        Attribute self.important_words is a list of tuples(word,tag)
+        """
+        try:
+            lem = nltk.stem.wordnet.WordNetLemmatizer()
+            lemmatized_words=[]
+            for word in self.important_words:
+                tag = self.get_senna_pos(word)
+                lemmatized_word = lem.lemmatize(word[0],tag)
+                lemmatized_words.append(lemmatized_word.lower())
+            self.lemmatized_word=lemmatized_words
+        except:
+            print("error in nltk.stem.wordnet.WordNetLemmatizer()")
 
     
     def get_lemmatized_words(self):
+        """
+        Driver method to get the lemmatized words
+        This method assigns all the attributes of the Parser class with the corresponding values
+        """
         self.tokenize_sentence()
         self.tokenize_word()
         self.get_senna_tags_sentences()
@@ -102,8 +156,11 @@ class Parser:
         return self.lemmatized_word
 
 if __name__=="__main__":
+    '''
+    Sample documents
+    '''
     document1 = """Hello Mr. Smith, how are you doing today? The weather is great, and city is awesome.
-    The sky is pinkish-blue. You shouldn't eat cardboard. I loved studying but now I do coding, crying"""
+    The sky is pinkish-blue and it is raining. You shouldn't eat cardboard. I loved studying but now I also love coding"""
     document2= """Long ago, when there was no written history, these islands were the home of millions of happy birds; the resort of a hundred times more millions of fishes, sea lions, and other creatures.
     Here lived innumerable creatures predestined from the creation of the world to lay up a store of wealth for the British farmer, and a store of quite another sort for an immaculate Republican government."""
     document3= """In ages which have no record these islands were the home of millions of happy birds, the resort of a hundred times more millions of fishes, of sea lions,
@@ -113,68 +170,7 @@ if __name__=="__main__":
     document5="""In ages which have no record these islands were the home of millions of "Contrast the condition into which all these friendly Indians are suddenly plunged now, with their condition only two years previous: martial law now in force on all their reservations; themselves in danger of starvation, and constantly exposed to the influence of emissaries from their friends and relations, urging them to join in fighting this treacherous government that had kept faith with nobody--neither with friend nor with foe."""
     document6="The quick brown fox is jumping over the lazy dog so quickly"
     
-    p=Parser(document6)
-    p.tokenize_sentence()
-    p.get_senna_tags_sentences()
-    p.tokenize_word()
-    p.remove_common_words()
-    p.lemmatization_with_pos_tags()
-    print(p.lemmatized_word)
+    p=Parser(document5)
+    words = p.get_lemmatized_words()
+    print(words)
 
-
-'''
-    home = os.path.expanduser('~')
-    st = SennaTagger(home+"\Downloads\senna-v3.0\senna")
-    lem = nltk.stem.wordnet.WordNetLemmatizer()
-    
-    print("-------------SennaTagger-------------")
-    tokenized_sentence=nltk.tokenize.sent_tokenize(p.document)
-    for i in tokenized_sentence:
-        print(st.tag(i.split()),end=" ")
-    
-    print("\n-------------SennaTagger with parsed sentences-------------")
-    for i in p.sentences:
-        print(st.tag(i.split()),end=" ")
-    
-    print("\n-------------SennaTagger with tokenized words-------------")
-    w = []
-    tokenized_word=nltk.tokenize.word_tokenize(p.document)
-    common_words=set(nltk.corpus.stopwords.words("english"))
-    
-    #print(w,end="\n")
-    punctuation = re.compile(r'[.?!,:;\'()|0-9]')
-    post_punctuation=[]
-    for words in tokenized_word:
-        z=punctuation.sub('',words)
-        if len(z)>2:
-            post_punctuation.append(z)
-    #print(post_punctuation)
-    _tags=[]
-    for i in post_punctuation:
-        #print(st.tag([i]),end=" ")
-        _tags.extend(st.tag([i]))
-    print(_tags)
-
-    for word in _tags:
-        if word[0].lower() not in common_words:
-            w.append(word)
-    print(w,end="\n")
-    lemmatized_words =[]
-    
-    for i in w:
-        tag = p.get_senna_pos(i)
-        lemmatizer = lem.lemmatize(i[0],tag)
-        lemmatized_words.append(lemmatizer)
-    print("\n---------------*************------------------\n")
-    print(lemmatized_words)
-    print("\nLemmetized words--->\n")
-    print(p.lemmatized_word)
-
-    print("\n-------------POSTagger-------------")    
-    for i in tokenized_sentence:
-        print(nltk.pos_tag(i.split()),end=" ")
-    print()
-    x="terribly"
-    print(st.tag([x]))
-    print(lem.lemmatize(x,'r'))
-'''
